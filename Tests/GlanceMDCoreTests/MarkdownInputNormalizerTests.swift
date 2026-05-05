@@ -76,6 +76,36 @@ struct MarkdownInputNormalizerTests {
         #expect(normalized.contains("| Second | Another long terminal wrapped note |"))
     }
 
+    @Test("repairs wrapped markdown link destinations in table cells")
+    func wrappedLinkDestinationInTableCell() {
+        let markdown = """
+        | Version | Item | Impact |
+        | --- | --- | --- |
+        | [`v1.13.0`](https://github.com/inngest/inngest/releases/tag/v1.13.0) | [Cron rewritten on queues](https://github.com/inngest/inngest/releases/tag/
+        v1.13.0) | Internal scheduling architecture change. |
+        """
+
+        let normalized = MarkdownInputNormalizer.normalize(markdown)
+
+        #expect(normalized.contains("[Cron rewritten on queues](https://github.com/inngest/inngest/releases/tag/v1.13.0)"))
+        #expect(MarkdownRenderer().renderBody(normalized).contains("<a href=\"https://github.com/inngest/inngest/releases/tag/v1.13.0\">Cron rewritten on queues</a>"))
+    }
+
+    @Test("repairs wrapped markdown link label and destination boundary")
+    func wrappedLinkBoundaryInTableCell() {
+        let markdown = """
+        | Version | Item | Impact |
+        | --- | --- | --- |
+        | [`v1.17.6`](https://github.com/inngest/inngest/releases/tag/v1.17.6) | [Connect panic, graceful shutdown, race, and silent message-loss fixes]
+        (https://github.com/inngest/inngest/releases/tag/v1.17.6) | Reliability improvement. |
+        """
+
+        let normalized = MarkdownInputNormalizer.normalize(markdown)
+
+        #expect(normalized.contains("[Connect panic, graceful shutdown, race, and silent message-loss fixes](https://github.com/inngest/inngest/releases/tag/v1.17.6)"))
+        #expect(MarkdownRenderer().renderBody(normalized).contains("<a href=\"https://github.com/inngest/inngest/releases/tag/v1.17.6\">Connect panic, graceful shutdown, race, and silent message-loss fixes</a>"))
+    }
+
     @Test("preserves table-looking text inside fences")
     func fencedTableUnchanged() {
         let markdown = """

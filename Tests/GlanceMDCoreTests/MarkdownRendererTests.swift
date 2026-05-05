@@ -175,6 +175,14 @@ struct MarkdownRendererTests {
         #expect(html.contains("<a href=\"https://example.com\">https://example.com</a>"))
     }
 
+    @Test("renders inline code inside link labels")
+    func linkLabelWithInlineCode() {
+        let html = renderer.renderBody("[`v1.13.0`](https://github.com/inngest/inngest/releases/tag/v1.13.0)")
+
+        #expect(html.contains("<a href=\"https://github.com/inngest/inngest/releases/tag/v1.13.0\"><code>v1.13.0</code></a>"))
+        #expect(!html.contains("QM0"))
+    }
+
     @Test("does not render non-web links")
     func nonWebLinks() {
         let html = renderer.renderBody("[Local](file:///Applications/Calculator.app) [Settings](x-apple.systempreferences:com.apple.preference.security)")

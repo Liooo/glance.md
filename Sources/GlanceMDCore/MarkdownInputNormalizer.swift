@@ -164,9 +164,62 @@ public enum MarkdownInputNormalizer {
     }
 
     private static func joinedRow(_ fragments: [String]) -> String {
-        fragments
+        let joined = fragments
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .joined(separator: " ")
+        return repairWrappedInlineLinks(in: joined)
+    }
+
+    private static func repairWrappedInlineLinks(in line: String) -> String {
+        let boundaryRepaired = line.replacingOccurrences(
+            of: "\\]\\s+\\(",
+            with: "](",
+            options: .regularExpression
+        )
+
+        var output = ""
+        var index = boundaryRepaired.startIndex
+
+        while index < boundaryRepaired.endIndex {
+            guard let labelEnd = boundaryRepaired[index...].firstIndex(of: "]"),
+                  boundaryRepaired.index(after: labelEnd) < boundaryRepaired.endIndex,
+                  boundaryRepaired[boundaryRepaired.index(after: labelEnd)] == "("
+            else {
+                output.append(boundaryRepaired[index])
+                index = boundaryRepaired.index(after: index)
+                continue
+            }
+
+            let destinationStart = boundaryRepaired.index(labelEnd, offsetBy: 2)
+            guard let destinationEnd = boundaryRepaired[destinationStart...].firstIndex(of: ")") else {
+                output.append(boundaryRepaired[index])
+                index = boundaryRepaired.index(after: index)
+                continue
+            }
+
+            output.append(contentsOf: boundaryRepaired[index..<destinationStart])
+            output.append(repairWrappedLinkDestination(String(boundaryRepaired[destinationStart..<destinationEnd])))
+            output.append(")")
+            index = boundaryRepaired.index(after: destinationEnd)
+        }
+
+        return output
+    }
+
+    private static func repairWrappedLinkDestination(_ destination: String) -> String {
+        let trimmed = destination.trimmingCharacters(in: .whitespaces)
+        guard trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") else {
+            return destination
+        }
+
+        if let titleStart = trimmed.firstIndex(where: { $0 == "\"" || $0 == "'" }) {
+            let url = trimmed[..<titleStart]
+                .filter { !$0.isWhitespace }
+            let title = trimmed[titleStart...]
+            return "\(url) \(title)"
+        }
+
+        return trimmed.filter { !$0.isWhitespace }
     }
 
     private static func isBlockBoundary(_ line: String) -> Bool {

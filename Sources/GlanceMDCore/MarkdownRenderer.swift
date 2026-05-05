@@ -361,7 +361,8 @@ public struct MarkdownRenderer: Sendable {
         escaped = replaceStrikethrough(in: escaped)
         escaped = replaceStrongAndEmphasis(in: escaped)
 
-        for (offset, value) in placeholders.enumerated() {
+        for offset in placeholders.indices.reversed() {
+            let value = placeholders[offset]
             escaped = escaped.replacingOccurrences(of: placeholder(offset), with: value)
         }
 
